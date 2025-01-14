@@ -1,5 +1,5 @@
 # ANS-Rechorus
-## 基于Rechorus框架的ANS算法复现
+## 基于[Rechorus](https://github.com/THUwangcy/ReChorus)框架的[ANS](https://arxiv.org/pdf/2308.05972)算法复现
 ### Getting Started
 
 ```bash
