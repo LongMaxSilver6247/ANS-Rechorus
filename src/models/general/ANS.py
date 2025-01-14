@@ -28,7 +28,7 @@ class ANS(GeneralModel):
 
 
 	def _define_params(self):
-		# 定义嵌入层
+		# 嵌入层
 		self.user_embedding = nn.Embedding(self.user_num, self.embedding_size)
 		self.item_embedding = nn.Embedding(self.item_num, self.embedding_size)
 
