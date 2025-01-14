@@ -7,7 +7,7 @@ from models.BaseModel import GeneralModel
 class ANS(GeneralModel):
 	reader = 'BaseReader'
 	runner = 'BaseRunner'
-	extra_log_args = ['embedding_size', 'batch_size', 'num_neg']
+	extra_log_args = ['embedding_size']
 
 	@staticmethod
 	def parse_model_args(parser):
@@ -19,7 +19,6 @@ class ANS(GeneralModel):
 	def __init__(self, args, corpus):
 		super().__init__(args, corpus)
 		self.embedding_size = args.embedding_size
-		self.dropout = args.dropout
 		self.num_neg = args.num_neg
 		self.batch_size = args.batch_size
 		self.user_num = corpus.n_users
@@ -78,8 +77,7 @@ class ANS(GeneralModel):
 			item_ids = np.concatenate([[target_item], neg_items]).astype(int)
 			feed_dict = {
 				'user_id': user_id,
-				'item_id': item_ids,
-				'batch_size': self.model.batch_size
+				'item_id': item_ids
 			}
 			return feed_dict
 
@@ -111,4 +109,3 @@ class ANS(GeneralModel):
 				popularity_norm = (item_interaction_count - item_interaction_count.min()) / (item_interaction_count.max() - item_interaction_count.min())
 			
 			return popularity_norm
-		
