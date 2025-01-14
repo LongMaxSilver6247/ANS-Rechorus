@@ -7,7 +7,7 @@ git clone https://github.com/LongMaxSilver6247/ANS-Rechorus.git
 cd ANS-Rechorus
 ```
 
-在ANS-Rechorus目录下创建虚拟环境
+在**ANS-Rechorus**目录下创建虚拟环境
 
 ```bash
 pip install -r requirements.txt
@@ -20,4 +20,4 @@ cd src
 python main.py --model_name ANS --dataset Grocery_and_Gourmet_Food
 ```
 
-运行结果
+运行结果\(与**BPRMF**以及**BUIR**算法进行对比\)
