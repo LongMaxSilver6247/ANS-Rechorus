@@ -11,12 +11,12 @@ cd ANS-Rechorus
 
 ```bash
 pip install -r requirements.txt
-cd src
 ```
   
 运行模型
 
 ```bash
+cd src
 python main.py --model_name ANS --dataset Grocery_and_Gourmet_Food
 ```
 
