@@ -1,2 +1,10 @@
 # ANS-Rechorus
-基于Rechorus框架的ANS算法复现
+## 基于Rechorus框架的ANS算法复现
+
+### Getting Started
+  ''git clone https://github.com/LongMaxSilver6247/ANS-Rechorus.git
+  cd ANS-Rechorus
+  ''
+
+在ANS-Rechorus目录下创建虚拟环境
+  ''pip install -r requirements.txt''
