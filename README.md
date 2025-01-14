@@ -20,7 +20,7 @@ cd src
 python main.py --model_name ANS --dataset Grocery_and_Gourmet_Food
 ```
 
-运行结果 \(与**BPRMF**以及**BUIR**算法进行对比, 运行参数相同 \(若有同种参数, e.g:batch_size\) \)
+运行结果 \(与**BPRMF**以及**BUIR**算法进行对比, 运行参数相同 \(若有同种参数, e.g: batch_size\) \)
 |Dataset                     |Method|HR@5   |NDCG@5 |HR@10  |NDCG@10|HR@20  |NDCG@20|HR@50  |NDCG@50|
 |:---:                       |:---: |:---:  |:---:  |:---:  |:---:  |:---:  |:---:  |:---:  |:---:  |
 |                            |ANS   |0.3171 |0.2180 |0.4209 |0.2516 |0.5314 |0.2795 |0.7408 |0.3206 |
