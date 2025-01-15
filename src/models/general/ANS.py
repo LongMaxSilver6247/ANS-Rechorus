@@ -19,8 +19,6 @@ class ANS(GeneralModel):
 		super().__init__(args, corpus)
 		self.embedding_size = args.embedding_size
 		self.num_neg = args.num_neg
-		self.batch_size = args.batch_size
-		self.l2 = args.l2
 		self.user_num = corpus.n_users
 		self.item_num = corpus.n_items
 
@@ -43,11 +41,9 @@ class ANS(GeneralModel):
 		prediction = (user_emb[:, None, :] * item_emb).sum(dim=-1)  # [batch_size, -1]
 		user_emb = user_emb.repeat(1,item_ids.shape[1]).view(item_ids.shape[0],item_ids.shape[1],-1)
 		item_emb = item_emb
-		l2_loss = self.l2 * (torch.sum(user_emb ** 2) + torch.sum(item_emb ** 2))
 		out_dict = {'prediction': prediction.view(feed_dict['batch_size'], -1), 
 			  		'u_v': user_emb, 
-			  		'i_v':item_emb, 
-			  		'l2_loss': l2_loss}
+			  		'i_v': item_emb	}
 		return out_dict
 
 
@@ -55,7 +51,6 @@ class ANS(GeneralModel):
 		prediction = out_dict['prediction']
 		pos_pred, neg_pred = prediction[:, 0], prediction[:, 1:]
 		loss = -torch.mean(torch.log(torch.sigmoid(pos_pred[:, None] - neg_pred)))
-		loss += out_dict['l2_loss']
 		return loss
 
 
