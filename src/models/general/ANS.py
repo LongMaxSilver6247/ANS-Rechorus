@@ -13,11 +13,14 @@ class ANS(GeneralModel):
 	def parse_model_args(parser):
 		parser.add_argument('--embedding_size', type=int, default=64,
 							help='Size of embedding vectors.')
+		parser.add_argument('--gama', type=int, default=0.03,
+							help='Used to adjust the impact of the contrastive loss and the disentanglement loss.')
 		return GeneralModel.parse_model_args(parser)
 
 	def __init__(self, args, corpus):
 		super().__init__(args, corpus)
 		self.embedding_size = args.embedding_size
+		self.gama = args.gama
 		self.num_neg = args.num_neg
 		self.user_num = corpus.n_users
 		self.item_num = corpus.n_items
@@ -46,25 +49,44 @@ class ANS(GeneralModel):
 			  		'i_v': item_emb	}
 		return out_dict
 
+	def bpr_loss(self, pos_score, neg_score):
+		return -torch.mean(torch.log(torch.sigmoid(pos_score - neg_score)))
+
+	def contrastive_loss(self, pos_emb, neg_emb):
+		pos_distance = torch.norm(pos_emb - neg_emb, p=2, dim=1)
+		neg_distance = torch.clamp(1 - pos_distance, min=0)
+		return torch.mean(neg_distance)
+
+	def disentanglement_loss(self, user_emb, item_emb):
+		user_norm = torch.norm(user_emb, p=2, dim=1)
+		item_norm = torch.norm(item_emb, p=2, dim=1)
+		return torch.mean(user_norm + item_norm)
 
 	def loss(self, out_dict):
 		prediction = out_dict['prediction']
-		pos_pred, neg_pred = prediction[:, 0], prediction[:, 1:]
-		loss = -torch.mean(torch.log(torch.sigmoid(pos_pred[:, None] - neg_pred)))
-		return loss
+		pos_score, neg_score = prediction[:, 0], prediction[:, 1:]
+		pos_user_emb, pos_item_emb, neg_item_emb = out_dict['u_v'][:, 0], out_dict['i_v'][:, 0], out_dict['i_v'][:, 1:]
 
+		bpr_loss = self.bpr_loss(pos_score, neg_score)
+		contrastive_loss = self.contrastive_loss(pos_item_emb, neg_item_emb)
+		dis_loss = self.disentanglement_loss(pos_user_emb, pos_item_emb)
+		loss = bpr_loss + self.gama * (contrastive_loss + dis_loss)
+		return loss
+	
+	def generate_augmented_negative_samples(self, user_id, neg_items, top_k=10):
+		user_emb = self.user_embedding(user_id)
+		item_embs = self.item_embedding(neg_items)  # 获取所有负样本的嵌入向量
+		similarities = torch.cosine_similarity(user_emb, item_embs, dim=-1)
+
+		# 选择相似度最高的k个负样本
+		_, top_k_indices = torch.topk(similarities, top_k)
+		augmented_neg_items = neg_items[top_k_indices.cpu().numpy()]
+
+		return augmented_neg_items
 
 	class Dataset(GeneralModel.Dataset):
 		def __init__(self, model, corpus, phase):
 			super().__init__(model, corpus, phase)
-			if self.phase == 'train':
-				interaction_df = pd.DataFrame({
-					'user_id': self.data['user_id'],
-					'item_id': self.data['item_id']
-				})
-				all_item_ids = pd.Series(range(self.corpus.n_items), name='item_id')
-				interaction_df = pd.concat([interaction_df, all_item_ids.to_frame()], ignore_index=True)
-				self.interaction_df = interaction_df.drop_duplicates(subset=['item_id'])
 
 		def _get_feed_dict(self, index):
 			user_id, target_item = self.data['user_id'][index], self.data['item_id'][index]
@@ -78,32 +100,3 @@ class ANS(GeneralModel):
 				'item_id': item_ids
 			}
 			return feed_dict
-
-		def actions_before_epoch(self):
-			neg_items = np.random.randint(1, self.corpus.n_items, size=(len(self), self.model.num_neg))
-			for i, u in enumerate(self.data['user_id']):
-				clicked_set = self.corpus.train_clicked_set[u]
-				for j in range(self.model.num_neg):
-					while neg_items[i][j] in clicked_set:
-						# Augment negative sampling
-						neg_items[i][j] = self._augmented_negative_sample(u, clicked_set)
-			self.data['neg_items'] = neg_items
-
-		def _augmented_negative_sample(self, user_id, clicked_set):
-			item_similarities = self._compute_item_popularity()
-			available_items = list(set(range(self.corpus.n_items)) - clicked_set)
-			weighted_items = [(item, item_similarities[item]) for item in available_items]
-			weighted_items.sort(key=lambda x: x[1], reverse=True)  # 按照相似度降序排列
-			sampled_item = weighted_items[np.random.choice(len(weighted_items))][0]
-			return sampled_item
-
-		def _compute_item_popularity(self):
-			item_interaction_count = self.interaction_df['item_id'].value_counts().reindex(range(self.corpus.n_items), fill_value=0).values
-
-			# 归一化
-			if item_interaction_count.max() - item_interaction_count.min() == 0:
-				popularity_norm = np.zeros_like(item_interaction_count)
-			else:
-				popularity_norm = (item_interaction_count - item_interaction_count.min()) / (item_interaction_count.max() - item_interaction_count.min())
-			
-			return popularity_norm
